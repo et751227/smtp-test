@@ -55,3 +55,84 @@
                 <label for="recipient">收件者信箱 (可選，用於寄送測試信)</label>
                 <input type="email" id="recipient" placeholder="test@example.com">
             </div>
+
+            <div class="button-group">
+                <button type="submit" id="verify-btn">僅驗證連線</button>
+                <button type="submit" id="send-btn">寄送測試信</button>
+            </div>
+        </form>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('smtp-form');
+        const verifyBtn = document.getElementById('verify-btn');
+        const sendBtn = document.getElementById('send-btn');
+        const resultDiv = document.getElementById('result');
+        const recipientInput = document.getElementById('recipient');
+
+        // 統一的處理函式
+        const handleRequest = async (action) => {
+            // 基礎表單驗證
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            // 如果是寄信，則收件者為必填
+            if (action === 'send' && !recipientInput.value) {
+                alert('若要寄送測試信，請務必填寫收件者信箱！');
+                recipientInput.focus();
+                return;
+            }
+
+            verifyBtn.disabled = true;
+            sendBtn.disabled = true;
+            resultDiv.style.display = 'block';
+            resultDiv.className = '';
+            resultDiv.textContent = (action === 'send' ? '正在寄送測試信...' : '正在驗證連線...');
+
+            const data = {
+                host: document.getElementById('smtp-server').value,
+                port: parseInt(document.getElementById('smtp-port').value, 10),
+                secure: document.getElementById('smtp-secure').value === 'true',
+                user: document.getElementById('username').value,
+                pass: document.getElementById('password').value,
+                // 只有在寄信時才傳遞 recipient
+                recipient: action === 'send' ? recipientInput.value : null
+            };
+
+            try {
+                const response = await fetch('/api/test-smtp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    resultDiv.className = 'success';
+                    resultDiv.textContent = '成功！\n' + result.message;
+                } else {
+                    resultDiv.className = 'error';
+                    resultDiv.textContent = '失敗：\n' + result.message;
+                }
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.textContent = '發生未知錯誤：\n' + error.message;
+            } finally {
+                verifyBtn.disabled = false;
+                sendBtn.disabled = false;
+            }
+        };
+
+        // 為表單的 submit 事件加上監聽，防止預設送出
+        form.addEventListener('submit', (e) => e.preventDefault());
+
+        // 分別為兩個按鈕加上點擊事件
+        verifyBtn.addEventListener('click', () => handleRequest('verify'));
+        sendBtn.addEventListener('click', () => handleRequest('send'));
+    </script>
+</body>
+</html>
