@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMTP 連線測試工具</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f4f7f9; color: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+        h1 { text-align: center; color: #1a2b4d; }
+        .form-group { margin-bottom: 1.2rem; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
+        input, select { width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 0.8rem; background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; transition: background-color 0.3s; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #a0c7e4; cursor: not-allowed; }
+        #result { margin-top: 1.5rem; padding: 1rem; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-family: monospace; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SMTP 連線測試</h1>
+        <form id="smtp-form">
+            <div class="form-group">
+                <label for="smtp-server">SMTP 伺服器</label>
+                <input type="text" id="smtp-server" placeholder="例如：smtp.gmail.com" required>
+            </div>
+            <div class="form-group">
+                <label for="smtp-port">連接埠 (Port)</label>
+                <input type="number" id="smtp-port" placeholder="例如：465 或 587" required>
+            </div>
+            <div class="form-group">
+                <label for="smtp-secure">加密方式</label>
+                <select id="smtp-secure">
+                    <option value="true" selected>SSL / TLS (通常 Port 465)</option>
+                    <option value="false">STARTTLS 或無加密 (通常 Port 587 或 25)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="username">帳號 (Username)</label>
+                <input type="text" id="username" placeholder="您的電子郵件地址" required>
+            </div>
+            <div class="form-group">
+                <label for="password">密碼 (Password)</label>
+                <input type="password" id="password" placeholder="郵件密碼或應用程式密碼" required>
+            </div>
+            <button type="submit" id="submit-btn">開始驗證</button>
+        </form>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('smtp-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const resultDiv = document.getElementById('result');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            submitBtn.disabled = true;
+            submitBtn.textContent = '驗證中...';
+            resultDiv.innerHTML = '';
+            resultDiv.className = '';
+
+            const data = {
+                host: document.getElementById('smtp-server').value,
+                port: parseInt(document.getElementById('smtp-port').value, 10),
+                secure: document.getElementById('smtp-secure').value === 'true',
+                user: document.getElementById('username').value,
+                pass: document.getElementById('password').value
+            };
+
+            try {
+                const response = await fetch('/api/test-smtp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    resultDiv.className = 'success';
+                    resultDiv.textContent = '驗證成功！\n' + result.message;
+                } else {
+                    resultDiv.className = 'error';
+                    resultDiv.textContent = '驗證失敗：\n' + result.message;
+                }
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.textContent = '發生未知錯誤：\n' + error.message;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '開始驗證';
+            }
+        });
+    </script>
+</body>
+</html>
